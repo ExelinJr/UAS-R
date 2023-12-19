@@ -1,0 +1,58 @@
+---
+title: "Untitled"
+author: "Winson & Daniel"
+date: "2023-12-13"
+output: html_document
+---
+
+#Library
+```{r}
+library(dplyr)
+library(tidyr)
+```
+
+## A.Data Loading dan Preprocessing
+# 1. Load Dataset
+```{r}
+# CP = Calon Pendaftar
+CP = read.csv('profiling.csv')
+CP = separate(CP, "ID.NAMA.JENIS_KEL.USIA.Ranking_Uni_Asal.IPK.RISET", into = c("ID", "Name", "Gender", "Age", "Ranking", "IPK", "RISET"), sep = ";")
+CP
+str(CP)
+
+# HK = Hasil Kelulusan
+HK = read.csv('admisi.csv')
+HK = separate(HK, "ID.GRE.TOEFL.MOT_LETTER.REKOM_LETTER.LULUS", into = c("ID", "GRE", "TOEFL", "MOT_LETTER", "REKOM_LETTER", "LULUS"), sep = ";")
+HK
+str(HK)
+```
+
+# 2. Check missing value, duplicate, outlier
+```{r}
+anyNA(CP)
+anyNA(HK)
+
+anyDuplicated(CP)
+anyDuplicated(HK)
+
+#Clearing data of CP$Age, LO = Lower Outlier, UO = Upper Outlier
+n = 500
+
+CP$Age = as.numeric(CP$Age)
+IQRAge = IQR(CP$Age)
+Q1Age = CP$Age[n / 2]
+Q3Age = CP$Age[n / 4*3]
+AgeLO = Q1Age - 1.5 * IQRAge
+AgeUO = Q3Age + 1.5 * IQRAge
+AgeLO
+AgeUO
+
+CP$IPK = as.numeric(CP$IPK)
+
+
+```
+
+# 3. Merge dataset 
+```{r}
+Data = merge(CP, HK, by = "ID")
+```
