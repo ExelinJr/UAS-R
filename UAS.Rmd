@@ -9,50 +9,97 @@ output: html_document
 ```{r}
 library(dplyr)
 library(tidyr)
+library(caret)
 ```
 
 ## A.Data Loading dan Preprocessing
 # 1. Load Dataset
 ```{r}
 # CP = Calon Pendaftar
-CP = read.csv('profiling.csv')
-CP = separate(CP, "ID.NAMA.JENIS_KEL.USIA.Ranking_Uni_Asal.IPK.RISET", into = c("ID", "Name", "Gender", "Age", "Ranking", "IPK", "RISET"), sep = ";")
+CP = read.csv('profiling.csv', sep = ";")
 CP
 str(CP)
 
 # HK = Hasil Kelulusan
-HK = read.csv('admisi.csv')
-HK = separate(HK, "ID.GRE.TOEFL.MOT_LETTER.REKOM_LETTER.LULUS", into = c("ID", "GRE", "TOEFL", "MOT_LETTER", "REKOM_LETTER", "LULUS"), sep = ";")
+HK = read.csv('admisi.csv', sep = ";")
 HK
 str(HK)
 ```
-
-# 2. Check missing value, duplicate, outlier
+# 2. Merge Dataset, Check missing value, Duplicate, Outlier
 ```{r}
-anyNA(CP)
-anyNA(HK)
+# merge data
+Data = merge(CP, HK, by = "ID")
+Data
+str(Data)
 
-anyDuplicated(CP)
-anyDuplicated(HK)
+anyNA(Data)
+anyDuplicated(Data)
 
-#Clearing data of CP$Age, LO = Lower Outlier, UO = Upper Outlier
-n = 500
+# remove duplicate
+Data = unique(Data)
+str(Data)
+Data
 
-CP$Age = as.numeric(CP$Age)
-IQRAge = IQR(CP$Age)
-Q1Age = CP$Age[n / 2]
-Q3Age = CP$Age[n / 4*3]
-AgeLO = Q1Age - 1.5 * IQRAge
-AgeUO = Q3Age + 1.5 * IQRAge
-AgeLO
-AgeUO
+# labeling Riset
+Data <- Data %>%
+  na.omit() %>%
+  mutate(RISET = ifelse(RISET == "Ya", 1, 0)) %>%
+  mutate(RISET = as.numeric(RISET))
 
-CP$IPK = as.numeric(CP$IPK)
+# labeling Jenis kelamin
+Data$JENIS_KEL [Data$JENIS_KEL == " L"] = 1 
+Data$JENIS_KEL [Data$JENIS_KEL == " P"] = 2
+Data$JENIS_KEL = as.numeric(Data$JENIS_KEL)
 
+# cleaning IPK
+Data = Data %>%
+  mutate(IPK = gsub("," , "." , IPK)) %>%
+  mutate(IPK = as.numeric(IPK)) %>%
+  mutate(IPK = ifelse(IPK > 4, NA, IPK)) %>%
+  na.omit() 
 
+# cleaning Surat Rekomendasi & Motivation Letter
+Data = Data %>%
+  mutate(MOT_LETTER =  gsub("," , "." , MOT_LETTER)) %>%
+  mutate(REKOM_LETTER =  gsub("," , "." , REKOM_LETTER)) %>%
+  mutate(MOT_LETTER = as.numeric(MOT_LETTER)) %>%
+  mutate(REKOM_LETTER = as.numeric(REKOM_LETTER)) 
+
+Data = Data %>%
+ mutate(MOT_LETTER = ifelse(MOT_LETTER > 5 | MOT_LETTER < 1, NA, MOT_LETTER)) %>%
+  mutate(REKOM_LETTER = ifelse(REKOM_LETTER > 5 | REKOM_LETTER < 1, NA, REKOM_LETTER)) %>%
+  na.omit()
+
+Data
+
+# Feature Selection
+Data = Data %>%
+  select(-ID) %>%
+  select(-NAMA) 
+  
 ```
 
-# 3. Merge dataset 
+# 5. Simple Randomsplit Training Testing 80:20
 ```{r}
-Data = merge(CP, HK, by = "ID")
+set.seed(123)
+split = sample(nrow(Data), size = 0.8 * nrow(Data), replace = F)
+training = Data[split,]
+testing = Data[-split,]
+```
+
+# B. Modeling dan Evaluasi
+# Model 1 (Logistic Regression)
+```{r}
+model1 = glm(LULUS ~., data=training, family = "binomial")
+
+summary(model1)
+
+# testing accuracy
+probs = predict(model1, newdata=testing, type="response")
+accuracy = mean(testing$LULUS == as.numeric(probs>0.5))
+print(accuracy)
+
+testing$LULUS <- as.factor(testing$LULUS)
+predicted <- as.factor(as.numeric(probs > 0.5))
+confusionMatrix(testing$LULUS, predicted)
 ```
