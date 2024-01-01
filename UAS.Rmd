@@ -10,6 +10,7 @@ output: html_document
 library(dplyr)
 library(tidyr)
 library(caret)
+library(shiny)
 ```
 
 ## A.Data Loading dan Preprocessing
@@ -102,4 +103,74 @@ print(accuracy)
 testing$LULUS <- as.factor(testing$LULUS)
 predicted <- as.factor(as.numeric(probs > 0.5))
 confusionMatrix(testing$LULUS, predicted)
+
+Data
+```
+
+# Shiny
+```{r}
+# UI
+ui <- fluidPage(
+  titlePanel("IEDU Prediction Tool"),
+  div(
+    style = "display: flex; justify-content: center; align-items: center;",
+    div(
+      style = "width: 1000px; padding: 20px; background-color: #ffffff; border-radius: 10px;",
+      sidebarLayout(
+        sidebarPanel(
+          radioButtons("jenis_kelamin", "Jenis Kelamin", c("L", "P"), selected = NULL),
+          numericInput("usia", "Usia", value = NULL),
+          numericInput("ranking_uni_asal", "Ranking Universitas Asal", value = NULL),
+          radioButtons("riset", "Apakah Melakukan Riset?", c("Ya", "Tidak"), selected = NULL),
+          numericInput("GRE", "GRE", value = NULL),
+          numericInput("TOEFL", "TOEFL", value = NULL)
+        ),
+        mainPanel(
+          actionButton("submit", "Submit"),
+          textOutput("prediksi")
+        )
+      ),
+      style = "overflow-y: scroll;"
+    )
+  )
+)
+
+# Server
+server <- function(input, output) {
+  values <- reactiveValues(
+    jenis_kelamin = NA,
+    riset = NA,
+    usia = NA,
+    ranking_uni_asal = NA,
+    GRE = NA,
+    TOEFL = NA
+  )
+
+  observeEvent(input$submit, {
+    values$jenis_kelamin <- input$jenis_kelamin
+    values$riset <- input$riset
+
+    # Create data frame for prediction
+    data_for_prediction <- data.frame(
+      jenis_kelamin = values$jenis_kelamin,
+      riset = values$riset,
+      usia = input$usia,
+      ranking_uni_asal = input$ranking_uni_asal,
+      GRE = input$GRE,
+      TOEFL = input$TOEFL
+    )
+
+    probs <- predict(model1, newdata = data_for_prediction, type = "response")
+    prediksi <- ifelse(probs > 0.5, 1, 0)
+
+    # Display results
+    output$prediksi <- renderText({
+      paste("Peluang lulus:", probs, ", Prediksi lulus:", prediksi)
+    })
+  })
+}
+
+# Run the app
+shinyApp(ui, server)
+
 ```
