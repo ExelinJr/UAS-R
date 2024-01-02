@@ -11,6 +11,7 @@ library(dplyr)
 library(tidyr)
 library(caret)
 library(shiny)
+library(rpart)
 ```
 
 ## A.Data Loading dan Preprocessing
@@ -107,10 +108,28 @@ confusionMatrix(testing$LULUS, predicted)
 Data
 ```
 
+# Model 2 (Binary Tree)
+```{r}
+model2 = rpart(LULUS ~., data=training, method = "class")
+
+summary(model2)
+
+# testing accuracy
+probs2 = predict(model2, newdata=testing, type="prob")
+accuracy2 = mean(testing$LULUS == as.numeric(probs>0.5))
+print(accuracy)
+
+testing$LULUS <- as.factor(testing$LULUS)
+predicted2 <- as.factor(as.numeric(probs2 > 0.5))
+confusionMatrix(testing$LULUS, predicted2)
+
+Data
+```
+
 # Shiny
 ```{r}
 # UI
-ui <- fluidPage(
+ui = fluidPage(
   titlePanel("IEDU Prediction Tool"),
   div(
     style = "display: flex; justify-content: center; align-items: center;",
@@ -118,12 +137,15 @@ ui <- fluidPage(
       style = "width: 1000px; padding: 20px; background-color: #ffffff; border-radius: 10px;",
       sidebarLayout(
         sidebarPanel(
-          radioButtons("jenis_kelamin", "Jenis Kelamin", c("L", "P"), selected = NULL),
-          numericInput("usia", "Usia", value = NULL),
-          numericInput("ranking_uni_asal", "Ranking Universitas Asal", value = NULL),
-          radioButtons("riset", "Apakah Melakukan Riset?", c("Ya", "Tidak"), selected = NULL),
+          radioButtons("JENIS_KEL", "Jenis Kelamin", c("L", "P"), selected = NULL),
+          numericInput("USIA", "Usia", value = NULL),
+          numericInput("Ranking_Uni_Asal", "Ranking Universitas Asal", value = NULL),
+          numericInput("IPK", "IPK", value = NULL),
+          radioButtons("RISET", "Apakah Melakukan Riset?", c("Ya", "Tidak"), selected = NULL),
           numericInput("GRE", "GRE", value = NULL),
-          numericInput("TOEFL", "TOEFL", value = NULL)
+          numericInput("TOEFL", "TOEFL", value = NULL),
+          numericInput("MOT_LETTER", "Motivation Letter", value = NULL),
+          numericInput("REKOM_LETTER", "Recommendation Letter", value = NULL),
         ),
         mainPanel(
           actionButton("submit", "Submit"),
@@ -136,41 +158,46 @@ ui <- fluidPage(
 )
 
 # Server
-server <- function(input, output) {
-  values <- reactiveValues(
-    jenis_kelamin = NA,
-    riset = NA,
-    usia = NA,
-    ranking_uni_asal = NA,
+server = function(input, output) {
+  values = reactiveValues(
+    JENIS_KEL = NA,
+    RISET = NA,
+    USIA = NA,
+    IPK = NA,
+    Ranking_Uni_Asal = NA,
     GRE = NA,
-    TOEFL = NA
+    TOEFL = NA,
+    MOT_LETTER = NA,
+    REKOM_LETTER = NA
   )
 
   observeEvent(input$submit, {
-    values$jenis_kelamin <- input$jenis_kelamin
-    values$riset <- input$riset
+    values$JENIS_KEL = ifelse(input$JENIS_KEL == "L", 1, 2)
+    values$RISET = ifelse(input$RISET == "Ya", 1, 0)
 
     # Create data frame for prediction
-    data_for_prediction <- data.frame(
-      jenis_kelamin = values$jenis_kelamin,
-      riset = values$riset,
-      usia = input$usia,
-      ranking_uni_asal = input$ranking_uni_asal,
+    data_for_prediction = data.frame(
+      JENIS_KEL = values$JENIS_KEL,
+      RISET = values$RISET,
+      USIA = input$USIA,
+      IPK = input$IPK,
+      Ranking_Uni_Asal = input$Ranking_Uni_Asal,
       GRE = input$GRE,
-      TOEFL = input$TOEFL
+      TOEFL = input$TOEFL,
+      MOT_LETTER = input$MOT_LETTER,
+      REKOM_LETTER = input$REKOM_LETTER
     )
 
-    probs <- predict(model1, newdata = data_for_prediction, type = "response")
-    prediksi <- ifelse(probs > 0.5, 1, 0)
+    probs = predict(model1, newdata = data_for_prediction, type = "response")
+    prediksi = ifelse(probs > 0.5, 1, 0)
 
-    # Display results
-    output$prediksi <- renderText({
-      paste("Peluang lulus:", probs, ", Prediksi lulus:", prediksi)
+    # Display results as "Lulus" or "Tidak lulus"
+    output$prediksi = renderText({
+      paste("Hasil Prediksi:",ifelse(prediksi == 1, "Lulus", "Tidak lulus"))
     })
   })
 }
 
 # Run the app
 shinyApp(ui, server)
-
 ```
