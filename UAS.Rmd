@@ -15,6 +15,9 @@ library(shinythemes)
 library(rpart)
 library (e1071)
 library(randomForest)
+library(gbm)
+library(ggplot2)
+library(ggcorrplot)
 ```
 
 ## A.Data Loading dan Preprocessing
@@ -80,8 +83,18 @@ Data
 # Feature Selection
 Data = Data %>%
   select(-ID) %>%
-  select(-NAMA) 
-  
+  select(-NAMA) %>%
+  select(-JENIS_KEL) %>%
+  select(-USIA)
+
+corr_matrix <- cor(Data[, 1:8], method = "pearson")
+corr_matrix
+ggcorrplot(corr_matrix[, 1:8], 
+           method = "square", 
+           show.legend = TRUE, 
+           title = "Correlation Plot")
+
+
 ```
 
 # 5. Simple Randomsplit Training Testing 80:20
@@ -120,78 +133,79 @@ dim(probs2)
 confusionMatrix(probs2, testing$LULUS)
 saveRDS(model2, file="model2.rds")
 ```
+
 # Model 3 (Support Vector Machine)
 ```{r}
 model3 = svm(LULUS ~ ., data = training, kernel = 'polynomial', cost = 1e8)
-
 probs3 = predict(model3, newdata = testing)
-
 svm.accuracy = mean(testing$LULUS == as.numeric(probs3>0.5))
 print(svm.accuracy)
-
 testing$LULUS <- as.factor(testing$LULUS)
 svm.predicted <- as.factor(as.numeric(probs3 > 0.5))
 confusionMatrix(testing$LULUS, svm.predicted)
 saveRDS(model3, file="model3.rds")
 ```
+
 # Model 4 (Random Forest)
 ```{r}
 model4 = randomForest(LULUS ~ ., data = training)
-
 probs4 = predict(model4, newdata = testing)
-
 rf.accuracy = mean(testing$LULUS == as.numeric(probs4>0.5))
 print(svm.accuracy)
-
 testing$LULUS <- as.factor(testing$LULUS)
 rf.predicted <- as.factor(as.numeric(probs4 > 0.5))
 confusionMatrix(testing$LULUS, rf.predicted)
 saveRDS(model4, file="model4.rds")
 ```
+
+# Model 5 (Gradient Boosting)
+```{r}
+model5 = gbm(
+  formula = LULUS ~. , data = training, distribution = "bernoulli", n.trees = 100, interaction.depth = 3, shrinkage = .1
+)
+probs5 = predict(model5, newdata=testing, type="response")
+probs5
+testing$LULUS <- as.factor(testing$LULUS)
+probs5 <- as.factor(as.numeric(probs5 > 0.5))
+confusionMatrix(probs5, testing$LULUS)
+saveRDS(model5, file="model5.rds")
+```
+
 # Shiny
 ```{r}
 # UI
-library(shiny)
-library(shinythemes)
-
 ui <- fluidPage(
-  theme = shinytheme("flatly"),  # Terapkan tema Bootstrap
-
+  theme = shinytheme("flatly"),
   navbarPage(
-    "IEDU Prediction Tool",  # Judul aplikasi di navbar
-
-    tabPanel("Prediksi",  # Buat tabPanel untuk konten aplikasi
+    "IEDU Prediction Tool",
+    div(
+      style = "display: flex; justify-content: center; flex-end: center; height: 100vh;",
       div(
-        style = "display: flex; justify-content: center; flex-end: center; height: 100vh;",
-        div(
-          style = "width: 1000px; padding: 20px; background-color: #ffffff; border-radius: 10px; margin: 0 auto;",
-          sidebarLayout(
-            sidebarPanel(
-              # Input fields
-              selectInput("MODEL", "Model Prediksi", choices = c("Logistic Regression", "Binary Tree"), selected = NULL),
-              selectInput("JENIS_KEL", "Jenis Kelamin", choices = c("Laki-laki", "Perempuan"), selected = NULL),
-              numericInput("USIA", "Usia", value = NULL, min = 0),
-              numericInput("Ranking_Uni_Asal", "Ranking Universitas Asal", value = NULL, min = 0),
-              numericInput("IPK", "IPK", value = NULL, min = 0, max = 4),
-              selectInput("RISET", "Apakah Melakukan Riset?", choices = c("Ya", "Tidak"), selected = NULL),
-              numericInput("GRE", "GRE", value = NULL, min = 0),
-              numericInput("TOEFL", "TOEFL", value = NULL, min = 0),
-              numericInput("MOT_LETTER", "Motivation Letter", value = NULL, min = 0, max = 5),
-              numericInput("REKOM_LETTER", "Recommendation Letter", value = NULL, min = 0, max = 5)
-            ),
-            mainPanel(
-              # Output
-              actionButton("submit", "Submit", class = "btn-primary"),
-              textOutput("prediksi")
-            )
+        style = "width: 1000px; padding: 10px; background-color: #ffffff; border-radius: 10px; margin: 0 auto;",
+        sidebarLayout(
+          sidebarPanel(
+            selectInput("MODEL", "Model Prediksi", choices = c("Logistic Regression", "Binary Tree","Support Vector Machine", "Random Forest", "Gradient Boosting"), selected = NULL),
+            numericInput("Ranking_Uni_Asal", "Ranking Universitas Asal", value = NULL, min = 0),
+            numericInput("IPK", "IPK", value = NULL, min = 0, max = 4),
+            selectInput("RISET", "Apakah Melakukan Riset?", choices = c("Ya", "Tidak"), selected = NULL),
+            numericInput("GRE", "GRE", value = NULL, min = 0),
+            numericInput("TOEFL", "TOEFL", value = NULL),
+            numericInput("MOT_LETTER", "Motivation Letter", value = NULL, min = 0, max = 5),
+            numericInput("REKOM_LETTER", "Recommendation Letter", value = NULL, max = 5)
+          ),
+          mainPanel(
+            actionButton("submit", "Submit", class = "btn-primary"),
+            textOutput("prediksi")
           )
+        ),
+        tags$div(
+          style = "font-size: 12px; margin-top: 10px; padding-bottom: 20px; text-align: center;",
+          HTML("Made by: Winson & Daniel")
         )
       )
     )
   )
 )
-
-
 
 # Server
 server = function(input, output) {
@@ -209,16 +223,16 @@ server = function(input, output) {
  
 model1 = readRDS("model1.rds")
 model2 = readRDS("model2.rds") 
+model3 = readRDS("model3.rds")
+model4 = readRDS("model4.rds")
+model5 = readRDS("model5.rds")
  
 observeEvent(input$submit, {
-values$JENIS_KEL = ifelse(input$JENIS_KEL == "Laki-laki", 1, 2)
 values$RISET = ifelse(input$RISET == "Ya", 1, 0)  
   
   # Create data frame for prediction
 data_for_prediction = data.frame(
-  JENIS_KEL = values$JENIS_KEL,
   RISET = values$RISET,
-  USIA = input$USIA,
   IPK = input$IPK,
   Ranking_Uni_Asal = input$Ranking_Uni_Asal,
   GRE = input$GRE,
@@ -227,13 +241,24 @@ data_for_prediction = data.frame(
   REKOM_LETTER = input$REKOM_LETTER
 )
   
+"Gradient Boosting"
   if (input$MODEL == "Logistic Regression") {
-   probs = predict(model1, newdata = data_for_prediction, type = "response")
-   prediksi = ifelse(probs > 0.5, 1, 0)
+    probs = predict(model1, newdata = data_for_prediction, type = "response")
+    prediksi = ifelse(probs > 0.5, 1, 0)
   } else if (input$MODEL == "Binary Tree") {
-   probs = predict(model2, newdata=data_for_prediction, type="class")
-   prediksi = probs
+    probs = predict(model2, newdata=data_for_prediction, type = "class")
+    prediksi = probs
+  } else if (input$MODEL == "Support Vector Machine") {
+    probs = predict(model3, newdata=data_for_prediction)
+    prediksi = ifelse(probs > 0.5, 1, 0)
+  } else if (input$MODEL == "Random Forest") {
+    probs = predict(model4, newdata=data_for_prediction)
+    prediksi = ifelse(probs > 0.5, 1, 0)
+  } else {
+    probs = predict(model5, newdata=data_for_prediction, type = "response")
+    prediksi = ifelse(probs > 0.5, 1, 0)
   }
+
 
 # Display results as "Lulus" or "Tidak lulus"
   output$prediksi = renderText({
