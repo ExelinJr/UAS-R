@@ -11,6 +11,7 @@ library(dplyr)
 library(tidyr)
 library(caret)
 library(shiny)
+library(shinythemes)
 library(rpart)
 ```
 
@@ -95,6 +96,7 @@ testing = Data[-split,]
 model1 = glm(LULUS ~., data=training, family = "binomial")
 
 summary(model1)
+saveRDS(model1, file="model1.rds")
 
 # testing accuracy
 probs = predict(model1, newdata=testing, type="response")
@@ -114,80 +116,105 @@ probs2 = predict(model2, newdata = testing, type = "class")
 
 dim(probs2)
 confusionMatrix(probs2, testing$LULUS)
+saveRDS(model2, file="model2.rds")
 ```
 
 # Shiny
 ```{r}
 # UI
-ui = fluidPage(
-  titlePanel("IEDU Prediction Tool"),
-  div(
-    style = "display: flex; justify-content: center; align-items: center;",
-    div(
-      style = "width: 1000px; padding: 20px; background-color: #ffffff; border-radius: 10px;",
-      sidebarLayout(
-        sidebarPanel(
-          radioButtons("JENIS_KEL", "Jenis Kelamin", c("L", "P"), selected = NULL),
-          numericInput("USIA", "Usia", value = NULL),
-          numericInput("Ranking_Uni_Asal", "Ranking Universitas Asal", value = NULL),
-          numericInput("IPK", "IPK", value = NULL),
-          radioButtons("RISET", "Apakah Melakukan Riset?", c("Ya", "Tidak"), selected = NULL),
-          numericInput("GRE", "GRE", value = NULL),
-          numericInput("TOEFL", "TOEFL", value = NULL),
-          numericInput("MOT_LETTER", "Motivation Letter", value = NULL),
-          numericInput("REKOM_LETTER", "Recommendation Letter", value = NULL),
-        ),
-        mainPanel(
-          actionButton("submit", "Submit"),
-          textOutput("prediksi")
+library(shiny)
+library(shinythemes)
+
+ui <- fluidPage(
+  theme = shinytheme("flatly"),  # Terapkan tema Bootstrap
+
+  navbarPage(
+    "IEDU Prediction Tool",  # Judul aplikasi di navbar
+
+    tabPanel("Prediksi",  # Buat tabPanel untuk konten aplikasi
+      div(
+        style = "display: flex; justify-content: center; flex-end: center; height: 100vh;",
+        div(
+          style = "width: 1000px; padding: 20px; background-color: #ffffff; border-radius: 10px; margin: 0 auto;",
+          sidebarLayout(
+            sidebarPanel(
+              # Input fields
+              selectInput("MODEL", "Model Prediksi", choices = c("Logistic Regression", "Binary Tree"), selected = NULL),
+              selectInput("JENIS_KEL", "Jenis Kelamin", choices = c("Laki-laki", "Perempuan"), selected = NULL),
+              numericInput("USIA", "Usia", value = NULL, min = 0),
+              numericInput("Ranking_Uni_Asal", "Ranking Universitas Asal", value = NULL, min = 0),
+              numericInput("IPK", "IPK", value = NULL, min = 0, max = 4),
+              selectInput("RISET", "Apakah Melakukan Riset?", choices = c("Ya", "Tidak"), selected = NULL),
+              numericInput("GRE", "GRE", value = NULL, min = 0),
+              numericInput("TOEFL", "TOEFL", value = NULL, min = 0),
+              numericInput("MOT_LETTER", "Motivation Letter", value = NULL, min = 0, max = 5),
+              numericInput("REKOM_LETTER", "Recommendation Letter", value = NULL, min = 0, max = 5)
+            ),
+            mainPanel(
+              # Output
+              actionButton("submit", "Submit", class = "btn-primary"),
+              textOutput("prediksi")
+            )
+          )
         )
-      ),
-      style = "overflow-y: scroll;"
+      )
     )
   )
 )
 
+
+
 # Server
 server = function(input, output) {
-  values = reactiveValues(
-    JENIS_KEL = NA,
-    RISET = NA,
-    USIA = NA,
-    IPK = NA,
-    Ranking_Uni_Asal = NA,
-    GRE = NA,
-    TOEFL = NA,
-    MOT_LETTER = NA,
-    REKOM_LETTER = NA
-  )
+ values = reactiveValues(
+  JENIS_KEL = NA,
+  RISET =NA,
+  USIA = NA,
+  IPK = NA,
+  Ranking_Uni_Asal = NA,
+  GRE = NA,
+  TOEFL = NA,
+  MOT_LETTER = NA,
+  REKOM_LETTER = NA
+ )
+ 
+model1 = readRDS("model1.rds")
+model2 = readRDS("model2.rds") 
+ 
+observeEvent(input$submit, {
+values$JENIS_KEL = ifelse(input$JENIS_KEL == "Laki-laki", 1, 2)
+values$RISET = ifelse(input$RISET == "Ya", 1, 0)  
+  
+  # Create data frame for prediction
+data_for_prediction = data.frame(
+  JENIS_KEL = values$JENIS_KEL,
+  RISET = values$RISET,
+  USIA = input$USIA,
+  IPK = input$IPK,
+  Ranking_Uni_Asal = input$Ranking_Uni_Asal,
+  GRE = input$GRE,
+  TOEFL = input$TOEFL,
+  MOT_LETTER = input$MOT_LETTER,
+  REKOM_LETTER = input$REKOM_LETTER
+)
+  
+  if (input$MODEL == "Logistic Regression") {
+   probs = predict(model1, newdata = data_for_prediction, type = "response")
+   prediksi = ifelse(probs > 0.5, 1, 0)
+  } else if (input$MODEL == "Binary Tree") {
+   probs = predict(model2, newdata=data_for_prediction, type="class")
+   prediksi = probs
+  }
 
-  observeEvent(input$submit, {
-    values$JENIS_KEL = ifelse(input$JENIS_KEL == "L", 1, 2)
-    values$RISET = ifelse(input$RISET == "Ya", 1, 0)
-
-    # Create data frame for prediction
-    data_for_prediction = data.frame(
-      JENIS_KEL = values$JENIS_KEL,
-      RISET = values$RISET,
-      USIA = input$USIA,
-      IPK = input$IPK,
-      Ranking_Uni_Asal = input$Ranking_Uni_Asal,
-      GRE = input$GRE,
-      TOEFL = input$TOEFL,
-      MOT_LETTER = input$MOT_LETTER,
-      REKOM_LETTER = input$REKOM_LETTER
-    )
-
-    probs = predict(model1, newdata = data_for_prediction, type = "response")
-    prediksi = ifelse(probs > 0.5, 1, 0)
-
-    # Display results as "Lulus" or "Tidak lulus"
-    output$prediksi = renderText({
-      paste("Hasil Prediksi:",ifelse(prediksi == 1, "Lulus", "Tidak lulus"))
-    })
+# Display results as "Lulus" or "Tidak lulus"
+  output$prediksi = renderText({
+   paste("Hasil Prediksi:",ifelse(prediksi==1, "Lulus", "Tidak lulus"))
   })
+ })
 }
 
 # Run the app
 shinyApp(ui, server)
+
+
 ```
