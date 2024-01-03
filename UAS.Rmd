@@ -104,26 +104,16 @@ print(accuracy)
 testing$LULUS <- as.factor(testing$LULUS)
 predicted <- as.factor(as.numeric(probs > 0.5))
 confusionMatrix(testing$LULUS, predicted)
-
-Data
 ```
 
 # Model 2 (Binary Tree)
 ```{r}
-model2 = rpart(LULUS ~., data=training, method = "class")
+model2 = rpart(LULUS ~., data=training, method="class")
 
-summary(model2)
+probs2 = predict(model2, newdata = testing, type = "class")
 
-# testing accuracy
-probs2 = predict(model2, newdata=testing, type="prob")
-accuracy2 = mean(testing$LULUS == as.numeric(probs>0.5))
-print(accuracy)
-
-testing$LULUS <- as.factor(testing$LULUS)
-predicted2 <- as.factor(as.numeric(probs2 > 0.5))
-confusionMatrix(testing$LULUS, predicted2)
-
-Data
+dim(probs2)
+confusionMatrix(probs2, testing$LULUS)
 ```
 
 # Shiny
