@@ -13,6 +13,8 @@ library(caret)
 library(shiny)
 library(shinythemes)
 library(rpart)
+library (e1071)
+library(randomForest)
 ```
 
 ## A.Data Loading dan Preprocessing
@@ -118,7 +120,34 @@ dim(probs2)
 confusionMatrix(probs2, testing$LULUS)
 saveRDS(model2, file="model2.rds")
 ```
+# Model 3 (Support Vector Machine)
+```{r}
+model3 = svm(LULUS ~ ., data = training, kernel = 'polynomial', cost = 1e8)
 
+probs3 = predict(model3, newdata = testing)
+
+svm.accuracy = mean(testing$LULUS == as.numeric(probs3>0.5))
+print(svm.accuracy)
+
+testing$LULUS <- as.factor(testing$LULUS)
+svm.predicted <- as.factor(as.numeric(probs3 > 0.5))
+confusionMatrix(testing$LULUS, svm.predicted)
+saveRDS(model3, file="model3.rds")
+```
+# Model 4 (Random Forest)
+```{r}
+model4 = randomForest(LULUS ~ ., data = training)
+
+probs4 = predict(model4, newdata = testing)
+
+rf.accuracy = mean(testing$LULUS == as.numeric(probs4>0.5))
+print(svm.accuracy)
+
+testing$LULUS <- as.factor(testing$LULUS)
+rf.predicted <- as.factor(as.numeric(probs4 > 0.5))
+confusionMatrix(testing$LULUS, rf.predicted)
+saveRDS(model4, file="model4.rds")
+```
 # Shiny
 ```{r}
 # UI
