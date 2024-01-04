@@ -100,7 +100,7 @@ ggcorrplot(corr_matrix[, 1:8],
 
 ```
 
-# 3. Simple Randomsplit Training Testing 80:20
+# 5. Simple Randomsplit Training Testing 80:20
 ```{r}
 set.seed(123)
 split = sample(nrow(Data), size = 0.8 * nrow(Data), replace = F)
@@ -108,7 +108,7 @@ training = Data[split,]
 testing = Data[-split,]
 ```
 
-## B. Modeling dan Evaluasi
+# B. Modeling dan Evaluasi
 # Model 1 (Logistic Regression)
 ```{r}
 model1 = glm(LULUS ~., data=training, family = "binomial")
@@ -117,24 +117,23 @@ summary(model1)
 saveRDS(model1, file="model1.rds")
 
 # testing accuracy
-probs1 = predict(model1, newdata=testing, type="response")
-accuracy = mean(testing$LULUS == as.numeric(probs1>0.5))
+probs = predict(model1, newdata=testing, type="response")
+accuracy = mean(testing$LULUS == as.numeric(probs>0.5))
 print(accuracy)
 
 testing$LULUS <- as.factor(testing$LULUS)
-probs1 <- as.factor(as.numeric(probs1 > 0.5))
-confusionMatrix(testing$LULUS, probs1)
+predicted <- as.factor(as.numeric(probs > 0.5))
+confusionMatrix(testing$LULUS, predicted)
 ```
 
-# Model 2 (Decison Tree)
+# Model 2 (Binary Tree)
 ```{r}
 model2 = rpart(LULUS ~., data=training, method="class")
 
-probs2 = predict(model2, newdata = testing, type = "prob")[,2]
+probs2 = predict(model2, newdata = testing, type = "class")
 
-testing$LULUS <- as.factor(testing$LULUS)
-probs2 <- as.factor(as.numeric(probs2 > 0.5))
-confusionMatrix(testing$LULUS, probs2)
+dim(probs2)
+confusionMatrix(probs2, testing$LULUS)
 saveRDS(model2, file="model2.rds")
 ```
 
@@ -171,10 +170,9 @@ probs5 = predict(model5, newdata=testing, type="response")
 probs5
 testing$LULUS <- as.factor(testing$LULUS)
 probs5 <- as.factor(as.numeric(probs5 > 0.5))
-confusionMatrix(testing$LULUS, probs5)
+confusionMatrix(probs5, testing$LULUS)
 saveRDS(model5, file="model5.rds")
 ```
-
 # Model 6 (Linear Regression)
 ```{r}
 model6 = lm(LULUS ~., data = training)
@@ -185,6 +183,7 @@ probs6 <- as.factor(as.numeric(probs6 > 0.5))
 confusionMatrix(probs6, testing$LULUS)
 saveRDS(model6, file="model6.rds")
 ```
+
 ## Model Evaluation with AUC
 # Model 1 (Logistic Regression)
 ```{r}
@@ -193,8 +192,8 @@ auc (testing$LULUS, predicted1)
 
 roc1 = roc(testing$LULUS, predicted1)
 auc1 = plot(roc1, auc.polygon = TRUE, print.auc = TRUE, main = 'Logistic Regression')
-
 ```
+
 # Model 2 (Decison Tree)
 ```{r}
 predicted2 = predict(model2, testing, type = "prob")[,2]
@@ -204,6 +203,7 @@ roc2 = roc(testing$LULUS, predicted2)
 auc2 = plot(roc2, auc.polygon = TRUE, print.auc = TRUE, main = "Decison Tree")
 
 ```
+
 # Model 3 (Support Vector Machine)
 ```{r}
 predicted3 = predict(model3, testing, type = "response")
@@ -213,6 +213,7 @@ roc3 = roc(testing$LULUS, predicted3)
 auc3 = plot(roc3, auc.polygon = TRUE, print.auc = TRUE, main = "SVM")
 
 ```
+
 # Model 4 (Random Forest)
 ```{r}
 predicted4 = predict(model4, testing, type = "response")
@@ -222,6 +223,7 @@ roc4 = roc(testing$LULUS, predicted4)
 auc4 = plot(roc4, auc.polygon = TRUE, print.auc = TRUE, main = "Random Forest")
 
 ```
+
 # Model 5 (Gradient Boosting)
 ```{r}
 predicted5 = predict(model5, testing, type = "response")
@@ -231,6 +233,7 @@ roc5 = roc(testing$LULUS, predicted5)
 auc5 = plot(roc5, auc.polygon = TRUE, print.auc = TRUE, main = "Gradient Boosting")
 
 ```
+
 # Model 6 (Linear Regression)
 ```{r}
 predicted6 = predict(model6, testing)
@@ -240,14 +243,14 @@ roc6 = roc(testing$LULUS, predicted6)
 auc6 = plot(roc6, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regression")
 
 ```
+
 # All Plot
 ```{r}
 par(mfrow = c(2, 3)); plot(roc1, auc.polygon = TRUE, print.auc = TRUE, main = "Logistic Regression"); plot(roc2, auc.polygon = TRUE, print.auc = TRUE, main = "Binary Tree"); plot(roc3, auc.polygon = TRUE, print.auc = TRUE, main = "SVM"); plot(roc4, auc.polygon = TRUE, print.auc = TRUE, main = "Random Forest"); plot(roc5, auc.polygon = TRUE, print.auc = TRUE, main = "Gradient Boosting"); plot(roc6, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regression")
 
 ```
 
-
-## Deployment using Shiny
+# Shiny
 ```{r}
 # UI
 ui <- fluidPage(
@@ -260,7 +263,7 @@ ui <- fluidPage(
         style = "width: 1000px; padding: 10px; background-color: #ffffff; border-radius: 10px; margin: 0 auto;",
         sidebarLayout(
           sidebarPanel(
-            selectInput("MODEL", "Model Prediksi", choices = c("Logistic Regression", "Binary Tree","Support Vector Machine", "Random Forest", "Gradient Boosting"), selected = NULL),
+            selectInput("MODEL", "Model Prediksi", choices = c( "Linear Regression ⭐", "Logistic Regression", "Decision Tree","Support Vector Machine", "Random Forest", "Gradient Boosting"), selected = NULL),
             numericInput("Ranking_Uni_Asal", "Ranking Universitas Asal", value = NULL, min = 0),
             numericInput("IPK", "IPK", value = NULL, min = 0, max = 4),
             selectInput("RISET", "Apakah Melakukan Riset?", choices = c("Ya", "Tidak"), selected = NULL),
@@ -302,6 +305,7 @@ model2 = readRDS("model2.rds")
 model3 = readRDS("model3.rds")
 model4 = readRDS("model4.rds")
 model5 = readRDS("model5.rds")
+model6 = readRDS("model6.rds")
  
 observeEvent(input$submit, {
 values$RISET = ifelse(input$RISET == "Ya", 1, 0)  
@@ -317,11 +321,10 @@ data_for_prediction = data.frame(
   REKOM_LETTER = input$REKOM_LETTER
 )
   
-"Gradient Boosting"
   if (input$MODEL == "Logistic Regression") {
     probs = predict(model1, newdata = data_for_prediction, type = "response")
     prediksi = ifelse(probs > 0.5, 1, 0)
-  } else if (input$MODEL == "Binary Tree") {
+  } else if (input$MODEL == "Decision Tree") {
     probs = predict(model2, newdata=data_for_prediction, type = "class")
     prediksi = probs
   } else if (input$MODEL == "Support Vector Machine") {
@@ -330,8 +333,11 @@ data_for_prediction = data.frame(
   } else if (input$MODEL == "Random Forest") {
     probs = predict(model4, newdata=data_for_prediction)
     prediksi = ifelse(probs > 0.5, 1, 0)
-  } else {
+  } else if (input$MODEL == "Gradient Boosting"){
     probs = predict(model5, newdata=data_for_prediction, type = "response")
+    prediksi = ifelse(probs > 0.5, 1, 0)
+  } else {
+    probs = predict(model6, newdata=data_for_prediction)
     prediksi = ifelse(probs > 0.5, 1, 0)
   }
 
@@ -345,6 +351,4 @@ data_for_prediction = data.frame(
 
 # Run the app
 shinyApp(ui, server)
-
-
 ```
