@@ -1,0 +1,358 @@
+---
+title: "Untitled"
+author: "Winson & Daniel"
+date: "2023-12-13"
+output: html_document
+---
+
+#Library
+```{r}
+library(dplyr)
+library(tidyr)
+library(caret)
+library(shiny)
+library(shinythemes)
+library(rpart)
+library (e1071)
+library(randomForest)
+library(gbm)
+library(ggplot2)
+library(ggcorrplot)
+library(Metrics)
+library(pROC)
+library (gbm)
+```
+
+## A.Data Loading dan Preprocessing
+# 1. Load Dataset
+```{r}
+# CP = Calon Pendaftar
+CP = read.csv('profiling.csv', sep = ";")
+CP
+str(CP)
+
+# HK = Hasil Kelulusan
+HK = read.csv('admisi.csv', sep = ";")
+HK
+str(HK)
+```
+# 2. Merge Dataset, Check missing value, Duplicate, Outlier
+```{r}
+# merge data
+Data = merge(CP, HK, by = "ID")
+Data
+str(Data)
+
+anyNA(Data)
+anyDuplicated(Data)
+
+# remove duplicate
+Data = unique(Data)
+str(Data)
+Data
+
+# labeling Riset
+Data <- Data %>%
+  na.omit() %>%
+  mutate(RISET = ifelse(RISET == "Ya", 1, 0)) %>%
+  mutate(RISET = as.numeric(RISET))
+
+# labeling Jenis kelamin
+Data$JENIS_KEL [Data$JENIS_KEL == " L"] = 1 
+Data$JENIS_KEL [Data$JENIS_KEL == " P"] = 2
+Data$JENIS_KEL = as.numeric(Data$JENIS_KEL)
+
+# cleaning IPK
+Data = Data %>%
+  mutate(IPK = gsub("," , "." , IPK)) %>%
+  mutate(IPK = as.numeric(IPK)) %>%
+  mutate(IPK = ifelse(IPK > 4, NA, IPK)) %>%
+  na.omit() 
+
+# cleaning Surat Rekomendasi & Motivation Letter
+Data = Data %>%
+  mutate(MOT_LETTER =  gsub("," , "." , MOT_LETTER)) %>%
+  mutate(REKOM_LETTER =  gsub("," , "." , REKOM_LETTER)) %>%
+  mutate(MOT_LETTER = as.numeric(MOT_LETTER)) %>%
+  mutate(REKOM_LETTER = as.numeric(REKOM_LETTER)) 
+
+Data = Data %>%
+ mutate(MOT_LETTER = ifelse(MOT_LETTER > 5 | MOT_LETTER < 1, NA, MOT_LETTER)) %>%
+  mutate(REKOM_LETTER = ifelse(REKOM_LETTER > 5 | REKOM_LETTER < 1, NA, REKOM_LETTER)) %>%
+  na.omit()
+
+Data
+
+# Feature Selection
+Data = Data %>%
+  select(-ID) %>%
+  select(-NAMA) %>%
+  select(-JENIS_KEL) %>%
+  select(-USIA)
+
+corr_matrix <- cor(Data[, 1:8], method = "pearson")
+corr_matrix
+ggcorrplot(corr_matrix[, 1:8], 
+           method = "square", 
+           show.legend = TRUE, 
+           title = "Correlation Plot")
+
+
+```
+
+# 5. Simple Randomsplit Training Testing 80:20
+```{r}
+set.seed(123)
+split = sample(nrow(Data), size = 0.8 * nrow(Data), replace = F)
+training = Data[split,]
+testing = Data[-split,]
+```
+
+# B. Modeling dan Evaluasi
+# Model 1 (Logistic Regression)
+```{r}
+model1 = glm(LULUS ~., data=training, family = "binomial")
+
+summary(model1)
+saveRDS(model1, file="model1.rds")
+
+# testing accuracy
+probs = predict(model1, newdata=testing, type="response")
+accuracy = mean(testing$LULUS == as.numeric(probs>0.5))
+print(accuracy)
+
+testing$LULUS <- as.factor(testing$LULUS)
+predicted <- as.factor(as.numeric(probs > 0.5))
+confusionMatrix(testing$LULUS, predicted)
+```
+
+# Model 2 (Binary Tree)
+```{r}
+model2 = rpart(LULUS ~., data=training, method="class")
+
+probs2 = predict(model2, newdata = testing, type = "class")
+
+dim(probs2)
+confusionMatrix(probs2, testing$LULUS)
+saveRDS(model2, file="model2.rds")
+```
+
+# Model 3 (Support Vector Machine)
+```{r}
+model3 = svm(LULUS ~ ., data = training, kernel = 'polynomial', cost = 1e8)
+probs3 = predict(model3, newdata = testing)
+svm.accuracy = mean(testing$LULUS == as.numeric(probs3>0.5))
+print(svm.accuracy)
+testing$LULUS <- as.factor(testing$LULUS)
+svm.predicted <- as.factor(as.numeric(probs3 > 0.5))
+confusionMatrix(testing$LULUS, svm.predicted)
+saveRDS(model3, file="model3.rds")
+```
+
+# Model 4 (Random Forest)
+```{r}
+model4 = randomForest(LULUS ~ ., data = training)
+probs4 = predict(model4, newdata = testing)
+rf.accuracy = mean(testing$LULUS == as.numeric(probs4>0.5))
+print(svm.accuracy)
+testing$LULUS <- as.factor(testing$LULUS)
+rf.predicted <- as.factor(as.numeric(probs4 > 0.5))
+confusionMatrix(testing$LULUS, rf.predicted)
+saveRDS(model4, file="model4.rds")
+```
+
+# Model 5 (Gradient Boosting)
+```{r}
+model5 = gbm(
+  formula = LULUS ~. , data = training, distribution = "bernoulli", n.trees = 100, interaction.depth = 3, shrinkage = .1
+)
+probs5 = predict(model5, newdata=testing, type="response")
+probs5
+testing$LULUS <- as.factor(testing$LULUS)
+probs5 <- as.factor(as.numeric(probs5 > 0.5))
+confusionMatrix(probs5, testing$LULUS)
+saveRDS(model5, file="model5.rds")
+```
+# Model 6 (Linear Regression)
+```{r}
+model6 = lm(LULUS ~., data = training)
+probs6 = predict(model6, newdata=testing, type="response")
+
+testing$LULUS <- as.factor(testing$LULUS)
+probs6 <- as.factor(as.numeric(probs6 > 0.5))
+confusionMatrix(probs6, testing$LULUS)
+saveRDS(model6, file="model6.rds")
+```
+
+## Model Evaluation with AUC
+# Model 1 (Logistic Regression)
+```{r}
+predicted1 = predict(model1, testing, type = "response")
+auc (testing$LULUS, predicted1)
+
+roc1 = roc(testing$LULUS, predicted1)
+auc1 = plot(roc1, auc.polygon = TRUE, print.auc = TRUE, main = 'Logistic Regression')
+```
+
+# Model 2 (Decison Tree)
+```{r}
+predicted2 = predict(model2, testing, type = "prob")[,2]
+auc (testing$LULUS, predicted2)
+
+roc2 = roc(testing$LULUS, predicted2)
+auc2 = plot(roc2, auc.polygon = TRUE, print.auc = TRUE, main = "Decison Tree")
+
+```
+
+# Model 3 (Support Vector Machine)
+```{r}
+predicted3 = predict(model3, testing, type = "response")
+auc (testing$LULUS, predicted3)
+
+roc3 = roc(testing$LULUS, predicted3)
+auc3 = plot(roc3, auc.polygon = TRUE, print.auc = TRUE, main = "SVM")
+
+```
+
+# Model 4 (Random Forest)
+```{r}
+predicted4 = predict(model4, testing, type = "response")
+auc (testing$LULUS, predicted4)
+
+roc4 = roc(testing$LULUS, predicted4)
+auc4 = plot(roc4, auc.polygon = TRUE, print.auc = TRUE, main = "Random Forest")
+
+```
+
+# Model 5 (Gradient Boosting)
+```{r}
+predicted5 = predict(model5, testing, type = "response")
+auc (testing$LULUS, predicted5)
+
+roc5 = roc(testing$LULUS, predicted5)
+auc5 = plot(roc5, auc.polygon = TRUE, print.auc = TRUE, main = "Gradient Boosting")
+
+```
+
+# Model 6 (Linear Regression)
+```{r}
+predicted6 = predict(model6, testing)
+auc (testing$LULUS, predicted6)
+
+roc6 = roc(testing$LULUS, predicted6)
+auc6 = plot(roc6, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regression")
+
+```
+
+# All Plot
+```{r}
+par(mfrow = c(2, 3)); plot(roc1, auc.polygon = TRUE, print.auc = TRUE, main = "Logistic Regression"); plot(roc2, auc.polygon = TRUE, print.auc = TRUE, main = "Binary Tree"); plot(roc3, auc.polygon = TRUE, print.auc = TRUE, main = "SVM"); plot(roc4, auc.polygon = TRUE, print.auc = TRUE, main = "Random Forest"); plot(roc5, auc.polygon = TRUE, print.auc = TRUE, main = "Gradient Boosting"); plot(roc6, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regression")
+
+```
+
+# Shiny
+```{r}
+# UI
+ui <- fluidPage(
+  theme = shinytheme("flatly"),
+  navbarPage(
+    "IEDU Prediction Tool",
+    div(
+      style = "display: flex; justify-content: center; flex-end: center; height: 100vh;",
+      div(
+        style = "width: 1000px; padding: 10px; background-color: #ffffff; border-radius: 10px; margin: 0 auto;",
+        sidebarLayout(
+          sidebarPanel(
+            selectInput("MODEL", "Model Prediksi", choices = c( "Linear Regression ⭐", "Logistic Regression", "Decision Tree","Support Vector Machine", "Random Forest", "Gradient Boosting"), selected = NULL),
+            numericInput("Ranking_Uni_Asal", "Ranking Universitas Asal", value = NULL, min = 0),
+            numericInput("IPK", "IPK", value = NULL, min = 0, max = 4),
+            selectInput("RISET", "Apakah Melakukan Riset?", choices = c("Ya", "Tidak"), selected = NULL),
+            numericInput("GRE", "GRE", value = NULL, min = 0),
+            numericInput("TOEFL", "TOEFL", value = NULL),
+            numericInput("MOT_LETTER", "Motivation Letter", value = NULL, min = 0, max = 5),
+            numericInput("REKOM_LETTER", "Recommendation Letter", value = NULL, max = 5)
+          ),
+          mainPanel(
+            actionButton("submit", "Submit", class = "btn-primary"),
+            textOutput("prediksi")
+          )
+        ),
+        tags$div(
+          style = "font-size: 12px; margin-top: 10px; padding-bottom: 20px; text-align: center;",
+          HTML("Made by: Winson & Daniel")
+        )
+      )
+    )
+  )
+)
+
+# Server
+server = function(input, output) {
+ values = reactiveValues(
+  JENIS_KEL = NA,
+  RISET =NA,
+  USIA = NA,
+  IPK = NA,
+  Ranking_Uni_Asal = NA,
+  GRE = NA,
+  TOEFL = NA,
+  MOT_LETTER = NA,
+  REKOM_LETTER = NA
+ )
+ 
+model1 = readRDS("model1.rds")
+model2 = readRDS("model2.rds") 
+model3 = readRDS("model3.rds")
+model4 = readRDS("model4.rds")
+model5 = readRDS("model5.rds")
+model6 = readRDS("model6.rds")
+ 
+observeEvent(input$submit, {
+values$RISET = ifelse(input$RISET == "Ya", 1, 0)  
+  
+  # Create data frame for prediction
+data_for_prediction = data.frame(
+  RISET = values$RISET,
+  IPK = input$IPK,
+  Ranking_Uni_Asal = input$Ranking_Uni_Asal,
+  GRE = input$GRE,
+  TOEFL = input$TOEFL,
+  MOT_LETTER = input$MOT_LETTER,
+  REKOM_LETTER = input$REKOM_LETTER
+)
+  
+  if (input$MODEL == "Logistic Regression") {
+    probs = predict(model1, newdata = data_for_prediction, type = "response")
+    prediksi = ifelse(probs > 0.5, 1, 0)
+  } else if (input$MODEL == "Decision Tree") {
+    probs = predict(model2, newdata=data_for_prediction, type = "class")
+    prediksi = probs
+  } else if (input$MODEL == "Support Vector Machine") {
+    probs = predict(model3, newdata=data_for_prediction)
+    prediksi = ifelse(probs > 0.5, 1, 0)
+  } else if (input$MODEL == "Random Forest") {
+    probs = predict(model4, newdata=data_for_prediction)
+    prediksi = ifelse(probs > 0.5, 1, 0)
+  } else if (input$MODEL == "Gradient Boosting"){
+    probs = predict(model5, newdata=data_for_prediction, type = "response")
+    prediksi = ifelse(probs > 0.5, 1, 0)
+  } else {
+    probs = predict(model6, newdata=data_for_prediction)
+    prediksi = ifelse(probs > 0.5, 1, 0)
+  }
+
+
+# Display results as "Lulus" or "Tidak lulus"
+  output$prediksi = renderText({
+   paste("Hasil Prediksi:",ifelse(prediksi==1, "Lulus", "Tidak lulus"))
+  })
+ })
+}
+
+# Run the app
+shinyApp(ui, server)
+```
+
+```{r}
+#Link Github Repository : https://github.com/ExelinJr/UAS
+```
