@@ -18,6 +18,9 @@ library(randomForest)
 library(gbm)
 library(ggplot2)
 library(ggcorrplot)
+library(Metrics)
+library(pROC)
+library (gbm)
 ```
 
 ## A.Data Loading dan Preprocessing
@@ -97,7 +100,7 @@ ggcorrplot(corr_matrix[, 1:8],
 
 ```
 
-# 5. Simple Randomsplit Training Testing 80:20
+# 3. Simple Randomsplit Training Testing 80:20
 ```{r}
 set.seed(123)
 split = sample(nrow(Data), size = 0.8 * nrow(Data), replace = F)
@@ -105,7 +108,7 @@ training = Data[split,]
 testing = Data[-split,]
 ```
 
-# B. Modeling dan Evaluasi
+## B. Modeling dan Evaluasi
 # Model 1 (Logistic Regression)
 ```{r}
 model1 = glm(LULUS ~., data=training, family = "binomial")
@@ -114,23 +117,24 @@ summary(model1)
 saveRDS(model1, file="model1.rds")
 
 # testing accuracy
-probs = predict(model1, newdata=testing, type="response")
-accuracy = mean(testing$LULUS == as.numeric(probs>0.5))
+probs1 = predict(model1, newdata=testing, type="response")
+accuracy = mean(testing$LULUS == as.numeric(probs1>0.5))
 print(accuracy)
 
 testing$LULUS <- as.factor(testing$LULUS)
-predicted <- as.factor(as.numeric(probs > 0.5))
-confusionMatrix(testing$LULUS, predicted)
+probs1 <- as.factor(as.numeric(probs1 > 0.5))
+confusionMatrix(testing$LULUS, probs1)
 ```
 
-# Model 2 (Binary Tree)
+# Model 2 (Decison Tree)
 ```{r}
 model2 = rpart(LULUS ~., data=training, method="class")
 
-probs2 = predict(model2, newdata = testing, type = "class")
+probs2 = predict(model2, newdata = testing, type = "prob")[,2]
 
-dim(probs2)
-confusionMatrix(probs2, testing$LULUS)
+testing$LULUS <- as.factor(testing$LULUS)
+probs2 <- as.factor(as.numeric(probs2 > 0.5))
+confusionMatrix(testing$LULUS, probs2)
 saveRDS(model2, file="model2.rds")
 ```
 
@@ -167,11 +171,83 @@ probs5 = predict(model5, newdata=testing, type="response")
 probs5
 testing$LULUS <- as.factor(testing$LULUS)
 probs5 <- as.factor(as.numeric(probs5 > 0.5))
-confusionMatrix(probs5, testing$LULUS)
+confusionMatrix(testing$LULUS, probs5)
 saveRDS(model5, file="model5.rds")
 ```
 
-# Shiny
+# Model 6 (Linear Regression)
+```{r}
+model6 = lm(LULUS ~., data = training)
+probs6 = predict(model6, newdata=testing, type="response")
+
+testing$LULUS <- as.factor(testing$LULUS)
+probs6 <- as.factor(as.numeric(probs6 > 0.5))
+confusionMatrix(probs6, testing$LULUS)
+saveRDS(model6, file="model6.rds")
+```
+## Model Evaluation with AUC
+# Model 1 (Logistic Regression)
+```{r}
+predicted1 = predict(model1, testing, type = "response")
+auc (testing$LULUS, predicted1)
+
+roc1 = roc(testing$LULUS, predicted1)
+auc1 = plot(roc1, auc.polygon = TRUE, print.auc = TRUE, main = 'Logistic Regression')
+
+```
+# Model 2 (Decison Tree)
+```{r}
+predicted2 = predict(model2, testing, type = "prob")[,2]
+auc (testing$LULUS, predicted2)
+
+roc2 = roc(testing$LULUS, predicted2)
+auc2 = plot(roc2, auc.polygon = TRUE, print.auc = TRUE, main = "Decison Tree")
+
+```
+# Model 3 (Support Vector Machine)
+```{r}
+predicted3 = predict(model3, testing, type = "response")
+auc (testing$LULUS, predicted3)
+
+roc3 = roc(testing$LULUS, predicted3)
+auc3 = plot(roc3, auc.polygon = TRUE, print.auc = TRUE, main = "SVM")
+
+```
+# Model 4 (Random Forest)
+```{r}
+predicted4 = predict(model4, testing, type = "response")
+auc (testing$LULUS, predicted4)
+
+roc4 = roc(testing$LULUS, predicted4)
+auc4 = plot(roc4, auc.polygon = TRUE, print.auc = TRUE, main = "Random Forest")
+
+```
+# Model 5 (Gradient Boosting)
+```{r}
+predicted5 = predict(model5, testing, type = "response")
+auc (testing$LULUS, predicted5)
+
+roc5 = roc(testing$LULUS, predicted5)
+auc5 = plot(roc5, auc.polygon = TRUE, print.auc = TRUE, main = "Gradient Boosting")
+
+```
+# Model 6 (Linear Regression)
+```{r}
+predicted6 = predict(model6, testing)
+auc (testing$LULUS, predicted6)
+
+roc6 = roc(testing$LULUS, predicted6)
+auc6 = plot(roc6, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regression")
+
+```
+# All Plot
+```{r}
+par(mfrow = c(2, 3)); plot(roc1, auc.polygon = TRUE, print.auc = TRUE, main = "Logistic Regression"); plot(roc2, auc.polygon = TRUE, print.auc = TRUE, main = "Binary Tree"); plot(roc3, auc.polygon = TRUE, print.auc = TRUE, main = "SVM"); plot(roc4, auc.polygon = TRUE, print.auc = TRUE, main = "Random Forest"); plot(roc5, auc.polygon = TRUE, print.auc = TRUE, main = "Gradient Boosting"); plot(roc6, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regression")
+
+```
+
+
+## Deployment using Shiny
 ```{r}
 # UI
 ui <- fluidPage(
