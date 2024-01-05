@@ -198,7 +198,7 @@ auc1t = plot(roc1t, auc.polygon= T, print.auc = T, main = "Logistic Regression T
 auc1 = plot(roc1, auc.polygon = TRUE, print.auc = TRUE, main = 'Logistic Regression Testing')
 ```
 
-## Model 2 (Decison Tree)
+## Model 2 (Decision Tree)
 ```{r}
 predicted2t = predict(model2, training, type = "prob")[,2]
 auc (training$LULUS, predicted2t)
@@ -208,8 +208,8 @@ auc (testing$LULUS, predicted2)
 roc2t = roc(training$LULUS, predicted2t)
 roc2 = roc(testing$LULUS, predicted2)
 
-auc2t = plot(roc2t, auc.polygon = TRUE, print.auc = TRUE, main = "Decison Tree Training")
-auc2 = plot(roc2, auc.polygon = TRUE, print.auc = TRUE, main = "Decison Tree Testing")
+auc2t = plot(roc2t, auc.polygon = TRUE, print.auc = TRUE, main = "Decision Tree Training")
+auc2 = plot(roc2, auc.polygon = TRUE, print.auc = TRUE, main = "Decision Tree Testing")
 
 ```
 
@@ -269,15 +269,15 @@ auc6 = plot(roc6, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regressio
 
 ## All Plot
 ```{r}
-par(mfrow = c(2, 3)); plot(roc1t, auc.polygon = TRUE, print.auc = TRUE, main = "Logistic Regression Training"); plot(roc2t, auc.polygon = TRUE, print.auc = TRUE, main = "Binary Tree Training"); plot(roc3t, auc.polygon = TRUE, print.auc = TRUE, main = "SVM Training"); plot(roc4t, auc.polygon = TRUE, print.auc = TRUE, main = "Random Forest Training"); plot(roc5t, auc.polygon = TRUE, print.auc = TRUE, main = "Gradient Boosting Training"); plot(roc6t, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regression Training")
+par(mfrow = c(2, 3)); plot(roc1t, auc.polygon = TRUE, print.auc = TRUE, main = "Logistic Regression Training"); plot(roc2t, auc.polygon = TRUE, print.auc = TRUE, main = "Decision Tree Training"); plot(roc3t, auc.polygon = TRUE, print.auc = TRUE, main = "SVM Training"); plot(roc4t, auc.polygon = TRUE, print.auc = TRUE, main = "Random Forest Training"); plot(roc5t, auc.polygon = TRUE, print.auc = TRUE, main = "Gradient Boosting Training"); plot(roc6t, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regression Training")
 
-par(mfrow = c(2, 3)); plot(roc1, auc.polygon = TRUE, print.auc = TRUE, main = "Logistic Regression Testing"); plot(roc2, auc.polygon = TRUE, print.auc = TRUE, main = "Binary Tree Testing"); plot(roc3, auc.polygon = TRUE, print.auc = TRUE, main = "SVM Testing"); plot(roc4, auc.polygon = TRUE, print.auc = TRUE, main = "Random Forest Testing"); plot(roc5, auc.polygon = TRUE, print.auc = TRUE, main = "Gradient Boosting Testing"); plot(roc6, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regression Testing")
+par(mfrow = c(2, 3)); plot(roc1, auc.polygon = TRUE, print.auc = TRUE, main = "Logistic Regression Testing"); plot(roc2, auc.polygon = TRUE, print.auc = TRUE, main = "Decision Tree Testing"); plot(roc3, auc.polygon = TRUE, print.auc = TRUE, main = "SVM Testing"); plot(roc4, auc.polygon = TRUE, print.auc = TRUE, main = "Random Forest Testing"); plot(roc5, auc.polygon = TRUE, print.auc = TRUE, main = "Gradient Boosting Testing"); plot(roc6, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regression Testing")
 
 ```
 
 
 ## Hasil Evaluasi
-Setelah melakukan proses pre-processing, kami menggunakan 6 jenis model untuk melakukan prediksi terhadap dataset testing. Model-model tersebut adalah logistic regression, decision tree, support vector machine, random forest, gradient boosting, dan juga linear regression. Dari keenam model tersebut kami mengevaluasi tiap model dengan ROC atau receiver operating characteristic dan menampilkannya dengan AUC atau area under curve. Pada akhirnya setelah dilakukan penghitungan score ROC ditemukan model dengan nilai terbaik yaitu model linear regression dimana model ini memiliki nilai ROC sebesar 0.973
+Setelah melakukan proses pre-processing, kami menggunakan 6 jenis model untuk melakukan prediksi terhadap dataset testing. Model-model tersebut adalah logistic regression, decision tree, support vector machine, random forest, gradient boosting, dan juga linear regression. Dari keenam model tersebut kami mengevaluasi tiap model dengan ROC atau receiver operating characteristic dan menampilkannya dengan AUC atau area under curve. Pada akhirnya setelah dilakukan penghitungan score ROC ditemukan model dengan nilai terbaik yaitu model linear regression dimana model ini memiliki nilai ROC sebesar 0.973
 
 # Shiny
 ```{r}
