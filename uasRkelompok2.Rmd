@@ -126,14 +126,13 @@ predicted <- as.factor(as.numeric(probs > 0.5))
 confusionMatrix(testing$LULUS, predicted)
 ```
 
-## Model 2 (Binary Tree)
+## Model 2 (Decision Tree)
 ```{r}
 model2 = rpart(LULUS ~., data=training, method="class")
 
 probs2 = predict(model2, newdata = testing, type = "class")
 
-dim(probs2)
-confusionMatrix(probs2, testing$LULUS)
+confusionMatrix(testing$LULUS, probs2)
 saveRDS(model2, file="model2.rds")
 ```
 
@@ -187,73 +186,97 @@ saveRDS(model6, file="model6.rds")
 # Model Evaluation with AUC
 ## Model 1 (Logistic Regression)
 ```{r}
+predicted1t = predict(model1, training, type = "response")
+auc (training$LULUS, predicted1t)
 predicted1 = predict(model1, testing, type = "response")
 auc (testing$LULUS, predicted1)
 
+roc1t = roc(training$LULUS, predicted1t)
 roc1 = roc(testing$LULUS, predicted1)
-auc1 = plot(roc1, auc.polygon = TRUE, print.auc = TRUE, main = 'Logistic Regression')
+
+auc1t = plot(roc1t, auc.polygon= T, print.auc = T, main = "Logistic Regression Training")
+auc1 = plot(roc1, auc.polygon = TRUE, print.auc = TRUE, main = 'Logistic Regression Testing')
 ```
 
 ## Model 2 (Decison Tree)
 ```{r}
+predicted2t = predict(model2, training, type = "prob")[,2]
+auc (training$LULUS, predicted2t)
 predicted2 = predict(model2, testing, type = "prob")[,2]
 auc (testing$LULUS, predicted2)
 
+roc2t = roc(training$LULUS, predicted2t)
 roc2 = roc(testing$LULUS, predicted2)
-auc2 = plot(roc2, auc.polygon = TRUE, print.auc = TRUE, main = "Decison Tree")
+
+auc2t = plot(roc2t, auc.polygon = TRUE, print.auc = TRUE, main = "Decison Tree Training")
+auc2 = plot(roc2, auc.polygon = TRUE, print.auc = TRUE, main = "Decison Tree Testing")
 
 ```
 
 ## Model 3 (Support Vector Machine)
 ```{r}
+predicted3t = predict(model3, training, type = "response")
 predicted3 = predict(model3, testing, type = "response")
+auc (training$LULUS, predicted3t)
 auc (testing$LULUS, predicted3)
 
+roc3t = roc(training$LULUS, predicted3t)
 roc3 = roc(testing$LULUS, predicted3)
-auc3 = plot(roc3, auc.polygon = TRUE, print.auc = TRUE, main = "SVM")
+auc3t = plot(roc3t, auc.polygon = TRUE, print.auc = TRUE, main = "SVM Training")
+auc3 = plot(roc3, auc.polygon = TRUE, print.auc = TRUE, main = "SVM Testing")
 
 ```
 
 ## Model 4 (Random Forest)
 ```{r}
+predicted4t = predict(model4, training, type = "response")
 predicted4 = predict(model4, testing, type = "response")
+auc (training$LULUS, predicted4t)
 auc (testing$LULUS, predicted4)
 
+roc4t = roc(training$LULUS, predicted4t)
 roc4 = roc(testing$LULUS, predicted4)
-auc4 = plot(roc4, auc.polygon = TRUE, print.auc = TRUE, main = "Random Forest")
+auc4t = plot(roc4t, auc.polygon = TRUE, print.auc = TRUE, main = "Random Forest Training")
+auc4 = plot(roc4, auc.polygon = TRUE, print.auc = TRUE, main = "Random Forest Testing")
 
 ```
 
 ## Model 5 (Gradient Boosting)
 ```{r}
+predicted5t = predict(model6, training, type = "response")
+auc (training$LULUS, predicted5t)
 predicted5 = predict(model5, testing, type = "response")
 auc (testing$LULUS, predicted5)
-
+roc5t = roc(training$LULUS, predicted5t)
 roc5 = roc(testing$LULUS, predicted5)
-auc5 = plot(roc5, auc.polygon = TRUE, print.auc = TRUE, main = "Gradient Boosting")
+auc5t = plot(roc5t, auc.polygon = TRUE, print.auc = TRUE, main = "Gradient Boosting Training")
+auc5 = plot(roc5, auc.polygon = TRUE, print.auc = TRUE, main = "Gradient Boosting Testing")
 
 ```
 
 ## Model 6 (Linear Regression)
 ```{r}
+predicted6t = predict(model6, training)
+auc (training$LULUS, predicted6t)
 predicted6 = predict(model6, testing)
 auc (testing$LULUS, predicted6)
-
+roc6t = roc(training$LULUS, predicted6t)
 roc6 = roc(testing$LULUS, predicted6)
-auc6 = plot(roc6, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regression")
+auc6t = plot(roc6t, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regression Training")
+auc6 = plot(roc6, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regression Testing")
 
 ```
 
 ## All Plot
 ```{r}
-par(mfrow = c(2, 3)); plot(roc1, auc.polygon = TRUE, print.auc = TRUE, main = "Logistic Regression"); plot(roc2, auc.polygon = TRUE, print.auc = TRUE, main = "Binary Tree"); plot(roc3, auc.polygon = TRUE, print.auc = TRUE, main = "SVM"); plot(roc4, auc.polygon = TRUE, print.auc = TRUE, main = "Random Forest"); plot(roc5, auc.polygon = TRUE, print.auc = TRUE, main = "Gradient Boosting"); plot(roc6, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regression")
+par(mfrow = c(2, 3)); plot(roc1t, auc.polygon = TRUE, print.auc = TRUE, main = "Logistic Regression Training"); plot(roc2t, auc.polygon = TRUE, print.auc = TRUE, main = "Binary Tree Training"); plot(roc3t, auc.polygon = TRUE, print.auc = TRUE, main = "SVM Training"); plot(roc4t, auc.polygon = TRUE, print.auc = TRUE, main = "Random Forest Training"); plot(roc5t, auc.polygon = TRUE, print.auc = TRUE, main = "Gradient Boosting Training"); plot(roc6t, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regression Training")
+
+par(mfrow = c(2, 3)); plot(roc1, auc.polygon = TRUE, print.auc = TRUE, main = "Logistic Regression Testing"); plot(roc2, auc.polygon = TRUE, print.auc = TRUE, main = "Binary Tree Testing"); plot(roc3, auc.polygon = TRUE, print.auc = TRUE, main = "SVM Testing"); plot(roc4, auc.polygon = TRUE, print.auc = TRUE, main = "Random Forest Testing"); plot(roc5, auc.polygon = TRUE, print.auc = TRUE, main = "Gradient Boosting Testing"); plot(roc6, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regression Testing")
 
 ```
 
 
 ## Hasil Evaluasi
-
-
 Setelah melakukan proses pre-processing, kami menggunakan 6 jenis model untuk melakukan prediksi terhadap dataset testing. Model-model tersebut adalah logistic regression, decision tree, support vector machine, random forest, gradient boosting, dan juga linear regression. Dari keenam model tersebut kami mengevaluasi tiap model dengan ROC atau receiver operating characteristic dan menampilkannya dengan AUC atau area under curve. Pada akhirnya setelah dilakukan penghitungan score ROC ditemukan model dengan nilai terbaik yaitu model linear regression dimana model ini memiliki nilai ROC sebesar 0.973
 
 # Shiny
