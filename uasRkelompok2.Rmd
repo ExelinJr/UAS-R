@@ -249,6 +249,10 @@ auc6 = plot(roc6, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regressio
 par(mfrow = c(2, 3)); plot(roc1, auc.polygon = TRUE, print.auc = TRUE, main = "Logistic Regression"); plot(roc2, auc.polygon = TRUE, print.auc = TRUE, main = "Binary Tree"); plot(roc3, auc.polygon = TRUE, print.auc = TRUE, main = "SVM"); plot(roc4, auc.polygon = TRUE, print.auc = TRUE, main = "Random Forest"); plot(roc5, auc.polygon = TRUE, print.auc = TRUE, main = "Gradient Boosting"); plot(roc6, auc.polygon = TRUE, print.auc = TRUE, main = "Linear Regression")
 
 ```
+# Hasil Evaluasi
+
+
+Setelah melakukan proses pre-processing, kami menggunakan 6 jenis model untuk melakukan prediksi terhadap dataset testing. Model-model tersebut adalah logistic regression, decision tree, support vector machine, random forest, gradient boosting, dan juga linear regression. Dari keenam model tersebut kami mengevaluasi tiap model dengan ROC atau receiver operating characteristic dan menampilkannya dengan AUC atau area under curve. Pada akhirnya setelah dilakukan penghitungan score ROC ditemukan model dengan nilai terbaik yaitu model linear regression dimana model ini memiliki nilai ROC sebesar 0.973
 
 # Shiny
 ```{r}
