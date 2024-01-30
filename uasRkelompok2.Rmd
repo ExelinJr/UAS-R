@@ -296,8 +296,8 @@ ui <- fluidPage(
             numericInput("Ranking_Uni_Asal", "Ranking Universitas Asal", value = NULL, min = 0),
             numericInput("IPK", "IPK", value = NULL, min = 0, max = 4),
             selectInput("RISET", "Apakah Melakukan Riset?", choices = c("Ya", "Tidak"), selected = NULL),
-            numericInput("GRE", "GRE", value = NULL, min = 0),
-            numericInput("TOEFL", "TOEFL", value = NULL),
+            numericInput("GRE", "GRE", value = NULL, min = 260, max = 340),
+            numericInput("TOEFL", "TOEFL", value = NULL, min = 0, max = 120),
             numericInput("MOT_LETTER", "Motivation Letter", value = NULL, min = 0, max = 5),
             numericInput("REKOM_LETTER", "Recommendation Letter", value = NULL, max = 5)
           ),
